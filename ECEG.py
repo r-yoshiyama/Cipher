@@ -11,58 +11,87 @@ import random
 import time
 import binascii
 import numpy as np
+import copy
 
-def check(a, s, d, n):
+def is_prime(n, k=30):
 	"""
-	isPrimeの終了条件チェック
-	"""
-	x = pow(a, d, n)
-	if x == 1:
-		return True
-	for i in range(s - 1):
-		if x == n - 1:
-			return True
-		x = pow(x, 2, n)
-	return x == n - 1
+	is_prime function
+	Implemented with Miller Rabin.
 
-def isPrime(p):
+	Parameters
+	----------
+	n : int
+		Number that
+	k : int
+		max loop count, default = 30
+
+	Returns
+	-------
+	True/False : boolean
+		if n is prime return True, else return False
 	"""
-	素数判定
-	pがPrime numberならTrue
-	"""
-	k = 30
-	if p == 2:
+
+	assert type(n) is int, "This function's argument is INT only"
+
+	if n == 2:
 		return True
-	if not p & 1:
+	if n == 1 or n & 1 == 0:
 		return False
-	s = 0
-	d = p - 1
-	while d % 2 == 0:
+	d = (n - 1) >> 1
+	while d & 1 == 0:
 		d >>= 1
-		s += 1
 	for i in range(k):
-		a = random.randint(2, p - 1)
-		if not check(a, s, d, p):
+		a = random.randint(1, n - 1)
+		t = d
+		y = pow(a, t, n)
+		while t != n - 1 and y != 1 and y != n - 1:
+			y = (y * y) % n
+			t <<= 1
+		if y != n - 1 and t & 1 == 0:
 			return False
 	return True
 
 def primeGene(N):
 	"""
 	Prime Generator
-	素数生成器
+
+	Parameters
+	----------
+	N : int
+		bit size
+
+	Returns
+	-------
+	p : int
+		Random Prime Number (N bit)
 	"""
+
 	p = 4
 	l = 10
 	b = random.randint(0, pow(2, N-l-1)-1)
-	while not isPrime(p):
+	while not is_prime(p):
 		a = random.randint(0, pow(2, l) - 1)
 		p = pow(2, N - l) * a + 2 * b + 1
 	return p
 
 def ex_euclid(a, b):
 	"""
-	拡張ユークリッド
+	Euclidean algorithm
+	ax + by = 1
+
+	Parameters
+	----------
+	a : int
+		a
+	b : int
+		b
+
+	Returns
+	-------
+	y0%a : int
+		y
 	"""
+
 	a0, x0, y0 = a, 1, 0
 	a1, x1, y1 = b%a, 0, 1
 	while a1 != 0:
@@ -70,40 +99,91 @@ def ex_euclid(a, b):
 		a0, x0, y0, a1, x1, y1 = a1, x1, y1, a0 - q * a1, x0 - q * x1, y0 - q * y1
 	return y0 % a
 
-def two_times_point(x, y, a, p):
+def two_times_point(point, a, p):
 	"""
-	楕円曲線上での点の2倍算
+	Scalar Multiplication (To double Point ) on Elliptic Curve
+	2 * (x, y) = (xn, yn)
+
+	Parameters
+	----------
+	point : list
+		Target Point
+	a : int
+		Elliptic Curve parameter
+	p : int
+		Elliptic Curve parameter, modulo
+
+	Returns
+	-------
+	[xn, yn] : list
+		(xn, yn) = 2 * (x, y)
 	"""
+	x = point[0]
+	y = point[1]
 	tmp = ex_euclid(p, 2*y)
 	l = ((3 * x**2 + a)* tmp)%p
 	xn = (l**2 - 2 * x)%p
 	yn = (l * (x - xn) - y)%p
-	return xn, yn
+	return [xn, yn]
 
-def add_point(x0, y0, x1, y1, p):
+def add_point(point0, point1, p):
 	"""
-	楕円曲線上での点の加算
+	Point Addition on Elliptic Curve
+	(x0, y0) + (x1, y1) = (xn, yn)
+
+	Parameters
+	----------
+	point0 : list
+		(x0, y0)
+	point1 : int
+		(x1, y1)
+	p : int
+		Elliptic Curve parameter, modulo
+
+	Returns
+	-------
+	[xn, yn] : list
+		(xn, yn) = (x0, y0) + (x1, y1)
 	"""
+	x0, y0 = point0[0], point0[1]
+	x1, y1 = point1[0], point1[1]
+
 	tmp = ex_euclid(p, x1 - x0)
 	l = ((y1 - y0)* tmp)%p
 	xn = (l**2 - x1 - x0)%p
 	yn = (l * (x0 - xn) - y0)%p
-	return xn, yn
+	return [xn, yn]
 
 def k_times_point(k, point, a, p):
 	"""
-	楕円曲線上の点のk倍算
+	Scalar Multiplication on Elliptic Curve
+	k * (x, y) = (qx, qy)
+
+	Parameters
+	----------
+	k : int
+		Number multiplied
+	point : list
+		Target Point
+	a : int
+		Elliptic Curve parameter
+	p : int
+		Elliptic Curve parameter, modulo
+
+	Returns
+	-------
+	point_q : list
+		Result, (qx, qy)
 	"""
+
 	d = format(k, "b")
-	x = point[0]
-	y = point[1]
+	point_q = copy.deepcopy(point)
 	d = d[1:]
-	qx, qy = x, y
 	for i in d:
-		qx, qy = two_times_point(qx, qy, a, p)
+		point_q = two_times_point(point_q, a, p)
 		if i == "1":
-			qx, qy = add_point(x, y, qx, qy, p)
-	return qx, qy
+			point_q = add_point(point, point_q, p)
+	return point_q
 
 
 def gen():
