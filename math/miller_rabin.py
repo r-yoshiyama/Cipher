@@ -1,10 +1,30 @@
 #!/usr/bin/env python
 # coding:utf-8
 
+"""
+Miller Rabin Primality Test
+"""
+
 import random
 
 def is_prime(n, k=30):
-	""" Miller Rabin Function """
+	"""
+	is_prime function
+	Implemented with Miller Rabin.
+
+	Parameters
+	----------
+	n : int
+		Number that
+	k : int
+		max loop count, default = 30
+
+	Returns
+	-------
+	True/False : boolean
+		if n is prime return True, else return False
+	"""
+
 	assert type(n) is int, "This function's argument is INT only"
 
 	if n == 2:
