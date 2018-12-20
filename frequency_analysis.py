@@ -6,60 +6,135 @@ So you use it,you can solve substitution cipher easy.
 """
 
 import re
+import sys
+import os
 import string as st
 import matplotlib.pyplot as plt
 
+
 def freq_analysis(text, char_set=st.ascii_lowercase, pattern=r"[\d | \s | \' | \" | : | ; | -]"):
     """
-    frequency analysis function
-    text <- target text
-    char_set <- Search character
-    pattern <- Patterns of excluded characters
+    frequency analysis module
+
+    Parameters
+    ----------
+    text : str
+        target text
+    char_set : str
+        Inspect Characters
+    pattern : str
+        ignore pattern
+    Returns
+    -------
+    data : dict{str: tuple(int, float)}
+        {Character: (Count, Percentage)}
     """
 
+    assert len(text) > 0, "text is empty"
     char_len = len(char_set)
     low_text = re.sub(pattern, "", text.lower())
-    text_length = len(low_text)
-    freq = [0 for i in range(char_len)]
-    data = [[0 for i in range(3)] for j in range(char_len)]
-    test = []
+    data = dict()
     for i, s in enumerate(char_set):
-        freq[i] = low_text.count(s)
-        data[i][0] = s
-        data[i][1] = freq[i]
-        data[i][2] = freq[i] / text_length * 100
-        test.append(s)
+        freq = low_text.count(s)
+        data[s] = (freq, freq / len(text) * 100)
 
-    return data, freq
+    ignore_count = len(text) - len(low_text)
+    data[".."] = (ignore_count, ignore_count / len(text) * 100)
+    return data
 
-def main():
-    """ Main function """
 
-    file_name = input("File Name >>> ")
-    f = open(file_name, "r", encoding="UTF-8")
-    text = f.read()
-    f.close()
+def print_table(data, char_set, text_len):
+    """
+    print table, format → markdown
 
-    alpha = st.ascii_lowercase
-    symbol = "," + "." + "(" + ")" + "{" + "}" + "?" + "!"
-    char_set = alpha + symbol
+    Parameters
+    ----------
+    data : dict
+        data
+    char_set : str
+        check character
+    text_len : int
+        target text length
+    Returns
+    -------
+    none
+    """
 
-    data, freq = freq_analysis(text, char_set)
+    count = 0
+    text_format = "| {0:<3} | {1:>10} |   {2:>20.15f} |"
+    print("-" * 45)
+    print("| chr |      count |         percentage (%) |")
+    print("| --- | " + "-"*10 + " | " + "-" * 22 + " |")
+    for s in char_set:
+        print(text_format.format(s, data[s][0], data[s][1]))
+        count += data[s][0]
+    print(text_format.format("Σ", count, count/text_len*100))
+    print(text_format.format("..", data[".."][0], data[".."][1]))
+    print("-" * 45)
 
-    print("\nLength of the text : " + str(len(text)))
-    for i in range(len(freq)):
-        print("{0} : {1:>10}     {2:>20}%".format(data[i][0], data[i][1], data[i][2]))
-    print("Σ : {0:>10}     {1:>20}%".format(sum(freq), sum(freq)/len(text) * 100))
-    print("Most frequently appearance character >>> " + data[freq.index(max(freq))][0])
 
+def plot_graph(data, char_set, file_name):
+    """
+    Graph Plot Module for frequency analysis
+
+    Parameters
+    ----------
+    data : dict{str:tuple(int, float)}
+        plot data
+    char_set : str
+        char_set
+    file_name : str
+        file_name
+    Returns
+    -------
+    none
+    """
+
+    freq = list()
+    for s in char_set:
+        freq.append(data[s][0])
     plt.bar([i for i in range(len(char_set))], freq)
     plt.xticks([i for i in range(len(char_set))], list(char_set))
     plt.xlabel("Char set")
     plt.ylabel("Count")
     plt.grid(color="gray")
     plt.title("Frequency Analysis for \"" + file_name + "\"")
-    plt.savefig(file_name + "_freq-ana.png")
+    file_name = os.path.splitext(file_name)[0]
+    plt.savefig(file_name + "_freq.png")
     plt.show()
 
+
+def main(file_name):
+    """
+    main module
+
+    Parameters
+    ----------
+    file_name : str
+        target file name
+    Returns
+    -------
+    none
+    """
+
+    try:
+        f = open(file_name, "r", encoding="UTF-8")
+        text = f.read()
+        f.close()
+    except:
+        print(sys.exc_info())
+        exit()
+
+    alpha = st.ascii_lowercase
+    symbol = "," + "." + "(" + ")" + "{" + "}" + "?" + "!"
+    char_set = alpha + symbol
+
+    data = freq_analysis(text, char_set)
+    print_table(data, char_set, len(text))
+    plot_graph(data, char_set, file_name)
+
+
 if __name__ == "__main__":
-    main()
+    args = sys.argv
+    assert len(args) == 2, "Usage " + args[0] + " file_name"
+    main(args[1])
